@@ -89,13 +89,13 @@ jobs:
       name: producao
       url: ${{ vars.APP_URL }}
     steps:
-      - name: dispara o deploy da imagem testada
+      # o serviço no Render é ligado ao repositório Git: o hook faz o build do commit que passou nos testes
+      - name: dispara o deploy no Render
         env:
           HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-          TAG: ${{ needs.imagem.outputs.tag }}
         run: |
           if [ -z "$HOOK" ]; then echo "secret RENDER_DEPLOY_HOOK_URL não configurado"; exit 1; fi
-          curl -fsS -X POST "$HOOK&imgURL=$(printf %s "$TAG" | jq -sRr @uri)"
+          curl -fsS -X POST "$HOOK"
 
       - name: espera a aplicação responder (smoke test)
         if: vars.APP_URL != ''

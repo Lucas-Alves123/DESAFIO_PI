@@ -215,7 +215,9 @@ curl -X POST "$RENDER_DEPLOY_HOOK_URL&imgURL=ghcr.io/lucas-alves123/mesadj:<sha>
 
 ### URL pública
 
-> **<https://mesadj.onrender.com>** *(atualizar após o primeiro deploy)*
+> **<https://desafio-pi.onrender.com>**
+>
+> Plano gratuito: após ~15 min sem acesso o serviço hiberna e o primeiro acesso pode levar ~50 s.
 
 ---
 
