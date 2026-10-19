@@ -1,0 +1,16 @@
+# Maven
+target/
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# segredos locais - nunca commitar
+.env
+
+# pasta temporária usada pra trazer o código antigo
+_pi_src/
+
+*.log

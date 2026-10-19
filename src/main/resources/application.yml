@@ -1,0 +1,29 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: mesadj
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/mesadj}
+    username: ${DB_USER:mesadj}
+    password: ${DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+mesa:
+  limite-instrumentos: ${MESA_LIMITE_INSTRUMENTOS:8}
