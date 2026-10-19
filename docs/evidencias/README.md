@@ -11,4 +11,4 @@ Salve os prints nesta pasta com exatamente estes nomes:
 | `05-pull-request.png` | Pull Request com os checks da esteira passando antes do merge |
 | `06-branch-protegida.png` | Settings → Branches: regra de proteção da `main` |
 | `07-url-publica.png` | Aplicação aberta na URL do Render |
-| `08-rollback.png` | Actions: execução do workflow `rollback` |
+| `08-rollback.png` | Render: deploy com *"Rolled back by you via Dashboard"* e status Live |
