@@ -251,7 +251,7 @@ Todas as capturas ficam em [`docs/evidencias/`](docs/evidencias/README.md).
 | **CI/CD** | GitLab CI, Jenkins, CircleCI | GitHub Actions: já é onde o repositório fica, sem conta extra. Os runners do Ubuntu têm Docker pré-instalado, o que simplifica o Testcontainers na esteira. |
 | **Deploy** | Railway, Fly.io | Render: plano gratuito suficiente para a entrega, suporte nativo a deploy por imagem Docker via webhook, banco PostgreSQL gerenciado disponível. |
 | **Fluxo de branch** | Git Flow (develop/release/hotfix) | GitHub Flow: grupo pequeno, uma versão no ar, ciclo de entrega curto. Uma branch por feature, PR → main → deploy. Git Flow teria cerimônia desnecessária. |
-| **Segredos** | Segredos no código, `.env` commitado | `.env` no `.gitignore`, `.env.example` como modelo. Segredos de produção (senha do banco, deploy hook) ficam nos **Secrets do GitHub**. O compose lê de variáveis de ambiente, sem valor padrão obrigatório para `DB_PASSWORD` (falha ruidosamente se não for definida). |
+| **Segredos** | Segredos no código, `.env` commitado | `.env` no `.gitignore`, `.env.example` como modelo. Segredos de produção ficam no cofre de cada ferramenta: a senha do banco nas **Environment Variables do Render** (`DB_URL`, `DB_USER`, `DB_PASSWORD`) e o deploy hook nos **Secrets do GitHub** (`RENDER_DEPLOY_HOOK_URL`). O compose lê de variáveis de ambiente, sem valor padrão obrigatório para `DB_PASSWORD` (falha ruidosamente se não for definida). |
 
 ---
 
