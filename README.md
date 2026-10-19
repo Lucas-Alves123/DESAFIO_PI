@@ -249,7 +249,7 @@ Todas as capturas ficam em [`docs/evidencias/`](docs/evidencias/README.md).
 | **Testes de domínio primeiro** | Começar pela API e testar tudo integrado | Escrevemos os testes de `Instrumento` antes da entidade. Isso forçou a definir o contrato do domínio (como normalizar o nome, qual faixa de BPM) sem pensar em banco ou HTTP. Menor risco de lógica de negócio vazando para o controller. |
 | **Testcontainers** | H2 nos testes de integração, banco local na porta fixa | Testcontainers sobe um PostgreSQL real isolado por execução. Pega problemas que o H2 não pegaria (dialeto SQL diferente, constraints de banco). Não exige que o desenvolvedor tenha o banco instalado. |
 | **CI/CD** | GitLab CI, Jenkins, CircleCI | GitHub Actions: já é onde o repositório fica, sem conta extra. Os runners do Ubuntu têm Docker pré-instalado, o que simplifica o Testcontainers na esteira. |
-| **Deploy** | Railway, Fly.io | Render: plano gratuito suficiente para a entrega, suporte nativo a deploy por imagem Docker via webhook, banco PostgreSQL gerenciado disponível. |
+| **Deploy** | Railway, Fly.io | Render: plano gratuito suficiente para a entrega, build direto do `Dockerfile` do repositório (mesma imagem do E1), banco PostgreSQL gerenciado na mesma região e rollback de 1 clique pelo histórico de deploys. O deploy é disparado pela esteira via deploy hook, só depois dos testes verdes. |
 | **Fluxo de branch** | Git Flow (develop/release/hotfix) | GitHub Flow: grupo pequeno, uma versão no ar, ciclo de entrega curto. Uma branch por feature, PR → main → deploy. Git Flow teria cerimônia desnecessária. |
 | **Segredos** | Segredos no código, `.env` commitado | `.env` no `.gitignore`, `.env.example` como modelo. Segredos de produção ficam no cofre de cada ferramenta: a senha do banco nas **Environment Variables do Render** (`DB_URL`, `DB_USER`, `DB_PASSWORD`) e o deploy hook nos **Secrets do GitHub** (`RENDER_DEPLOY_HOOK_URL`). O compose lê de variáveis de ambiente, sem valor padrão obrigatório para `DB_PASSWORD` (falha ruidosamente se não for definida). |
 
@@ -257,7 +257,7 @@ Todas as capturas ficam em [`docs/evidencias/`](docs/evidencias/README.md).
 
 ## Uso de IA
 
-Usamos o Antigravity (IA da CESAR School) durante o desenvolvimento desta entrega. Abaixo declaramos onde e como:
+Usamos o **Antigravity** (assistente de programação com IA do Google) durante o desenvolvimento desta entrega. Abaixo declaramos onde e como:
 
 | Etapa | O que a IA gerou | O que revisamos / alteramos |
 |-------|------------------|-----------------------------|
@@ -266,7 +266,19 @@ Usamos o Antigravity (IA da CESAR School) durante o desenvolvimento desta entreg
 | Testes unitários | `InstrumentoTest`, `MesaServiceTest` | Revisamos os casos de borda; adicionamos o teste de `intervaloBatidaMs` que fazia referência à lógica original de threads |
 | Testes de integração | `InstrumentoRepositoryIT`, `InstrumentoApiIT`, steps do Cucumber | Ajustamos o `@Transactional` nos steps para isolar cenários; corrigimos o cenário de "mesa cheia" |
 | Dockerfile e compose | Gerado pela IA | Revisamos o `HEALTHCHECK`, o usuário sem root e o `depends_on` com `condition: service_healthy` |
-| Pipeline | `.github/workflows/pipeline.yml` e `rollback.yml` | Ajustamos o encoding da tag da imagem e o smoke test pós-deploy |
+| Pipeline | `.github/workflows/pipeline.yml` | Ajustamos o encoding da tag da imagem e o smoke test pós-deploy |
+| Deploy no Render | Passo a passo de configuração (banco, variáveis, deploy hook) e diagnóstico de erros | Corrigimos a senha do banco após erro de autenticação nos logs; trocamos o deploy por imagem pelo deploy do repositório; rollback feito e validado pelo painel |
 | README | Gerado com base nas decisões tomadas pelo grupo | Revisado e complementado pelo grupo antes de commitar |
 
-Os prompts principais foram: *"monte a estrutura de um projeto Spring Boot com TDD para a Mesa DJ"*, *"escreva os testes unitários das regras de BPM e nome do instrumento antes da implementação"* e *"crie um Dockerfile multi-stage para Java 21 com PostgreSQL via compose"*.
+Os prompts principais foram: *"monte a estrutura de um projeto Spring Boot com TDD para a Mesa DJ"*, *"escreva os testes unitários das regras de BPM e nome do instrumento antes da implementação"*, *"crie um Dockerfile multi-stage para Java 21 com PostgreSQL via compose"* e *"me guie passo a passo no deploy no Render"*.
+
+---
+
+## Jornada TDD e lições aprendidas
+
+- **Teste primeiro obriga a decidir a regra.** Antes de escrever `Instrumento`, tivemos que responder "qual é o BPM mínimo?" e "nome com espaço vale?". O teste virou a especificação.
+- **Cada nível pega um tipo de erro.** O unitário pega regra errada em milissegundos; o de integração (Testcontainers) pega erro de banco que o H2 esconderia; o BDD garante que a história do DJ funciona de ponta a ponta.
+- **A esteira vermelha é a prova de que o gate funciona.** Quebramos o BPM de propósito (`58005c1`): os testes falharam e o deploy foi pulado. O código quebrado nunca chegou ao ar.
+- **"Funciona na minha máquina" sumiu.** O mesmo `Dockerfile` roda no PC, na esteira e no Render.
+- **Produção ensina o que o teste não ensina.** O primeiro deploy falhou por senha errada do banco. O erro estava claro nos logs, e foi resolvido sem mexer no código, porque a configuração estava fora dele.
+- **IA acelera, mas a gente valida.** A IA rascunhou código e testes; revisamos os casos de borda e as regras contra a versão original de console.
