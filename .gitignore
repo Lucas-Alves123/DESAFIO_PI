@@ -14,3 +14,5 @@ target/
 _pi_src/
 
 *.log
+
+docs/roteiro-apresentacao.md
