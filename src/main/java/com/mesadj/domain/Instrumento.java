@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 @Table(name = "instrumento")
 public class Instrumento {
 
-    public static final int BPM_MIN = 40;
+    public static final int BPM_MIN = 999; // QUEBRADO: evidência da esteira vermelha, será revertido
     public static final int BPM_MAX = 300;
     public static final int BPM_PADRAO = 120;
     public static final int VOLUME_PADRAO = 80;
