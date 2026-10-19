@@ -70,6 +70,53 @@ docker compose down -v       # para e apaga o volume do banco
 
 ---
 
+## Story map
+
+### Backbone (jornada do DJ)
+
+```
+ Montar a mesa  ──►  Ajustar o ritmo  ──►  Mixar ao vivo  ──►  Ver a mesa no navegador
+```
+
+| Backbone | **Release 1 (entregue)** | Release 2 (futuro) |
+|----------|--------------------------|--------------------|
+| Montar a mesa | **H1 · Adicionar instrumento** (+ remover) | Salvar e carregar "sets" |
+| Ajustar o ritmo | **H2 · Controlar BPM** | Sincronizar BPM de todos (sync) |
+| Mixar ao vivo | **H3 · Tocar, pausar e volume** | Efeitos (eco, filtro), crossfader |
+| Ver no navegador | Interface web com Web Audio | Login por DJ, várias mesas |
+
+### Release 1 quebrada em tarefas
+
+**H1 · Adicionar instrumento** — *como DJ, quero colocar instrumentos na mesa para montar a mixagem*
+
+| # | Tarefa | Teste que nasceu antes |
+|---|--------|------------------------|
+| 1.1 | Normalizar o nome (minúsculo, sem espaços nas pontas, não vazio) | `InstrumentoTest` |
+| 1.2 | Recusar nome repetido (409) | `MesaServiceTest` |
+| 1.3 | Limitar a mesa a 8 instrumentos (422) | `MesaServiceTest` |
+| 1.4 | Persistir no Postgres com constraint de unicidade | `InstrumentoRepositoryIT` |
+| 1.5 | Endpoint `POST /api/instrumentos` | `InstrumentoApiIT` + `h1_adicionar_instrumento.feature` |
+
+**H2 · Controlar BPM** — *como DJ, quero mudar o BPM para acompanhar a pista sem estragar o som*
+
+| # | Tarefa | Teste que nasceu antes |
+|---|--------|------------------------|
+| 2.1 | Aceitar BPM só entre 40 e 300 | `InstrumentoTest` |
+| 2.2 | Calcular o intervalo da batida em ms | `InstrumentoTest` |
+| 2.3 | BPM inválido não altera o estado (422) | `MesaServiceTest` |
+| 2.4 | Endpoint `PUT /api/instrumentos/{nome}/bpm` | `InstrumentoApiIT` + `h2_controlar_bpm.feature` |
+
+**H3 · Tocar, pausar e volume** — *como DJ, quero ligar, desligar e mudar o volume para controlar a mixagem ao vivo*
+
+| # | Tarefa | Teste que nasceu antes |
+|---|--------|------------------------|
+| 3.1 | Tocar / pausar | `InstrumentoTest` |
+| 3.2 | Volume limitado entre 0 e 100 (clamping) | `InstrumentoTest` |
+| 3.3 | Instrumento inexistente → 404 | `MesaServiceTest` |
+| 3.4 | Endpoints de tocar, pausar e volume | `InstrumentoApiIT` + `h3_tocar_pausar_volume.feature` |
+
+---
+
 ## Testes
 
 ### Estrutura de testes por nível
@@ -95,6 +142,19 @@ docker compose down -v       # para e apaga o volume do banco
 ```
 
 Os testes de integração e aceitação sobem um PostgreSQL descartável via **Testcontainers**. Não é necessário ter o banco instalado.
+
+### Quais regras ganharam teste primeiro (e por quê)
+
+1. **Faixa de BPM (40–300)** — é o maior risco: um BPM 0 travaria a thread/batida e um BPM absurdo estraga o som ao vivo.
+2. **Nome repetido** — dois canais com o mesmo nome deixariam os comandos do DJ ambíguos.
+3. **Limite de 8 instrumentos** — protege a mesa (e o áudio do navegador) de sobrecarga.
+4. **Volume 0–100** — menor risco, porque é corrigido por clamping em vez de erro.
+
+### O que ficou sem teste automatizado
+
+- **Interface web (`mesa.js` / `mesa.css`) e o som da Web Audio API** — validados manualmente no navegador.
+- **Deploy no Render** — coberto apenas pelo smoke test `/actuator/health` na esteira.
+- **Rollback** — validado por execução manual do workflow (ver evidências).
 
 ### Histórico red → green
 
@@ -155,7 +215,26 @@ curl -X POST "$RENDER_DEPLOY_HOOK_URL&imgURL=ghcr.io/lucas-alves123/mesadj:<sha>
 
 ### URL pública
 
-> **<https://mesadj.onrender.com>** *(atualizar após o primeiro deploy)*
+> **<https://desafio-pi.onrender.com>**
+>
+> Plano gratuito: após ~15 min sem acesso o serviço hiberna e o primeiro acesso pode levar ~50 s.
+
+---
+
+## Evidências
+
+Todas as capturas ficam em [`docs/evidencias/`](docs/evidencias/README.md).
+
+| Evidência | Arquivo |
+|-----------|---------|
+| `docker compose ps` com os dois serviços *healthy* | `docs/evidencias/01-compose-ps.png` |
+| API respondendo (`/actuator/health` e `/api/instrumentos`) | `docs/evidencias/02-api-local.png` |
+| Esteira **vermelha** barrando o deploy (commit `58005c1`) | `docs/evidencias/03-esteira-vermelha.png` |
+| Esteira **verde** publicando no Render | `docs/evidencias/04-esteira-verde.png` |
+| Pull Request com checks obrigatórios | `docs/evidencias/05-pull-request.png` |
+| Proteção da branch `main` | `docs/evidencias/06-branch-protegida.png` |
+| Aplicação no ar (URL pública) | `docs/evidencias/07-url-publica.png` |
+| Rollback executado | `docs/evidencias/08-rollback.png` |
 
 ---
 
