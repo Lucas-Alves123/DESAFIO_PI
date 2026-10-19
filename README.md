@@ -205,13 +205,13 @@ push / PR na main
 
 ### Rollback
 
-Workflow manual em `rollback.yml`. Acesse **Actions → rollback → Run workflow** e informe o SHA de 7 caracteres da versão que deve voltar.
+O serviço no Render é ligado ao repositório Git e guarda o histórico de deploys. Para voltar uma versão:
 
-Equivalente via curl:
-```bash
-# substitua <sha> pelo SHA do commit bom (ex.: a1b2c3d)
-curl -X POST "$RENDER_DEPLOY_HOOK_URL&imgURL=ghcr.io/lucas-alves123/mesadj:<sha>"
-```
+1. Render → **DESAFIO_PI → Events**
+2. No deploy bom anterior, clicar em **Rollback → Rollback to this deploy**
+3. O Render recoloca no ar exatamente aquele build (sem rebuild) e desliga o Auto-Deploy, para que só a esteira volte a publicar.
+
+Para voltar à versão mais nova: **Manual Deploy → Deploy latest commit**, ou um novo merge na `main`.
 
 ### URL pública
 
