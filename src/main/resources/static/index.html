@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mesa DJ — controle ao vivo</title>
+  <meta name="description" content="Mesa DJ: controle os instrumentos, BPM e volume da sua mixagem direto do navegador.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/mesa.css">
+</head>
+<body>
+  <div class="fundo" aria-hidden="true"></div>
+
+  <header class="topo">
+    <div class="marca">
+      <span class="disco" aria-hidden="true"></span>
+      <div>
+        <h1>Mesa DJ</h1>
+        <p>controle ao vivo · cada canal é um instrumento</p>
+      </div>
+    </div>
+    <div class="status-geral">
+      <span id="contador" class="pilula">0 canais</span>
+      <button id="btn-som" class="btn btn-fantasma" type="button">🔇 Ativar som</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="mesa" aria-label="Canais da mesa">
+      <div id="canais" class="canais"></div>
+    </section>
+
+    <section class="painel-add" aria-labelledby="titulo-add">
+      <h2 id="titulo-add">Novo canal</h2>
+      <form id="form-add" autocomplete="off">
+        <input id="input-nome" name="nome" placeholder="ex.: guitarra" maxlength="40" required>
+        <button id="btn-add" class="btn btn-primario" type="submit">Adicionar</button>
+      </form>
+      <p class="dica">Sem espaço no nome · BPM de 40 a 300 · volume de 0 a 100</p>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <template id="tpl-canal">
+    <article class="canal">
+      <header>
+        <span class="led"></span>
+        <h3 class="nome"></h3>
+        <button class="remover" type="button" title="Remover canal">✕</button>
+      </header>
+      <div class="vu"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      <label class="campo">
+        <span>BPM <b class="bpm-valor"></b></span>
+        <input class="bpm" type="range" min="40" max="300" step="1">
+      </label>
+      <label class="campo">
+        <span>Volume <b class="vol-valor"></b></span>
+        <input class="volume" type="range" min="0" max="100" step="1">
+      </label>
+      <button class="btn btn-play" type="button"></button>
+    </article>
+  </template>
+
+  <script src="/js/mesa.js"></script>
+</body>
+</html>

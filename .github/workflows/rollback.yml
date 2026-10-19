@@ -1,0 +1,27 @@
+name: rollback
+
+# volta o Render pra uma imagem que já passou na esteira antes.
+# uso: Actions > rollback > Run workflow > informar o SHA curto (7 caracteres) do commit bom
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "SHA curto (7 caracteres) da versão que deve voltar"
+        required: true
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment:
+      name: producao
+      url: ${{ vars.APP_URL }}
+    steps:
+      - name: redeploy da imagem antiga
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          OWNER: ${{ github.repository_owner }}
+          SHA: ${{ inputs.sha }}
+        run: |
+          img="ghcr.io/$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')/mesadj:$SHA"
+          echo "voltando para $img"
+          curl -fsS -X POST "$HOOK&imgURL=$(printf %s "$img" | jq -sRr @uri)"

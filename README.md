@@ -1,1 +1,193 @@
-# DESAFIO_PI
+# Mesa DJ — API de controle de instrumentos
+
+Projeto Integrador — Container, TDD e Deploy automatizados  
+CESAR School · Infraestrutura de Software · 2026.2 · ADS
+
+---
+
+## Integrantes
+
+| Nome | GitHub |
+|------|--------|
+| Gabriel Farias | — |
+| Gabriel Nogueira | — |
+| Lucas Mateus | [@Lucas-Alves123](https://github.com/Lucas-Alves123) |
+| Mirella Emily | — |
+| Myllena Cristiane | — |
+
+---
+
+## O que é o projeto
+
+A Mesa DJ nasceu na entrega anterior como um simulador de console multithread em Java puro, onde cada instrumento rodava em uma thread separada e o DJ controlava tudo por linha de comando (`play bateria`, `bpm baixo 128`, etc.).
+
+Nesta entrega transformamos o núcleo de regras em uma **API REST com Spring Boot + PostgreSQL**, mantendo a mesma lógica de negócio (nome do instrumento, faixa de BPM, limite de canais na mesa) e adicionando uma interface web que roda no navegador. O som continua sendo sintetizado — agora pela Web Audio API do próprio browser.
+
+---
+
+## Como rodar
+
+### Pré-requisitos
+
+- Docker e Docker Compose instalados e com o daemon rodando
+- Git
+
+### Do zero em um único comando
+
+```bash
+git clone https://github.com/Lucas-Alves123/DESAFIO_PI.git
+cd DESAFIO_PI
+cp .env.example .env          # edite a senha se quiser
+docker compose up -d --build
+```
+
+Após o build (primeira vez leva ~2 min por conta do download das imagens), acesse:
+
+- **Interface web:** <http://localhost:8080>
+- **API:** <http://localhost:8080/api/instrumentos>
+- **Health:** <http://localhost:8080/actuator/health>
+
+### Verificar que está no ar
+
+```bash
+# status dos containers
+docker compose ps
+
+# log da API
+docker compose logs -f api
+
+# testar a API direto
+curl http://localhost:8080/actuator/health
+curl http://localhost:8080/api/instrumentos
+```
+
+### Parar
+
+```bash
+docker compose down          # para sem apagar os dados
+docker compose down -v       # para e apaga o volume do banco
+```
+
+---
+
+## Testes
+
+### Estrutura de testes por nível
+
+| Nível | Arquivo(s) | O que valida |
+|-------|-----------|--------------|
+| **Unitário** | `InstrumentoTest` | Regras puras do domínio: normalização do nome, faixa de BPM (40–300), clamping de volume (0–100) |
+| **Unitário** | `MesaServiceTest` | Regras da mesa: nome duplicado → 409, limite de canais → 422, instrumento inexistente → 404. Usa Mockito, sem banco. |
+| **Integração** | `InstrumentoRepositoryIT` | Repositório JPA contra PostgreSQL real (Testcontainers). Valida a migração Flyway e a constraint de unicidade do banco. |
+| **Integração** | `InstrumentoApiIT` | Stack completa via MockMvc + PostgreSQL. Cobre todos os endpoints e os códigos HTTP esperados. |
+| **Aceitação** | `h1_adicionar_instrumento.feature` | Cenários BDD da história H1: adicionar, nome repetido, mesa cheia. |
+| **Aceitação** | `h2_controlar_bpm.feature` | Cenários BDD da história H2: BPM dentro e fora da faixa. |
+| **Aceitação** | `h3_tocar_pausar_volume.feature` | Cenários BDD da história H3: tocar, pausar, volume, instrumento inexistente. |
+
+### Rodar localmente
+
+```bash
+# só os unitários (rápido, sem Docker)
+./mvnw test
+
+# suite completa: unitários + integração + aceitação (precisa do Docker)
+./mvnw verify
+```
+
+Os testes de integração e aceitação sobem um PostgreSQL descartável via **Testcontainers**. Não é necessário ter o banco instalado.
+
+### Histórico red → green
+
+O histórico de commits mostra o ciclo TDD:
+
+```
+test: regras do instrumento (nome, BPM entre 40 e 300, volume 0-100)
+feat: entidade Instrumento com validação de nome, BPM e volume
+test: regras da mesa (nome repetido, limite de instrumentos, não encontrado)
+feat: MesaService com limite de instrumentos e bloqueio de nome repetido
+test: integração com Postgres e cenários BDD das três histórias
+feat: controller REST, tratamento de erros e interface web
+```
+
+---
+
+## Pipeline e deploy
+
+### Fluxo (GitHub Flow)
+
+```
+feature/* ──PR──► main ──► deploy automático no Render
+```
+
+- `main` é protegida: push direto bloqueado, PR exige a esteira verde.
+- Branches de feature seguem o padrão `feat/`, `fix/`, `test/`.
+
+### Esteira (`.github/workflows/pipeline.yml`)
+
+```
+push / PR na main
+       │
+       ▼
+   ┌─────────┐
+   │ testes  │  mvn verify (unitários + integração + aceitação)
+   └────┬────┘
+        │ verde
+        ▼
+   ┌─────────┐
+   │ imagem  │  docker build → publica no GHCR (só em push na main)
+   └────┬────┘
+        │
+        ▼
+   ┌─────────┐
+   │  deploy │  dispara o deploy hook do Render + smoke test /actuator/health
+   └─────────┘
+```
+
+### Rollback
+
+Workflow manual em `rollback.yml`. Acesse **Actions → rollback → Run workflow** e informe o SHA de 7 caracteres da versão que deve voltar.
+
+Equivalente via curl:
+```bash
+# substitua <sha> pelo SHA do commit bom (ex.: a1b2c3d)
+curl -X POST "$RENDER_DEPLOY_HOOK_URL&imgURL=ghcr.io/lucas-alves123/mesadj:<sha>"
+```
+
+### URL pública
+
+> **<https://mesadj.onrender.com>** *(atualizar após o primeiro deploy)*
+
+---
+
+## Decisões e justificativas
+
+| Decisão | Alternativas consideradas | Escolha e motivo |
+|---------|--------------------------|-----------------|
+| **Imagem base (build)** | `maven:3.9-eclipse-temurin-21`, `openjdk:21` puro | `maven:3.9-eclipse-temurin-21` no 1º estágio: já tem Maven e JDK, o cache de dependências fica numa camada separada. No 2º estágio, `eclipse-temurin:21-jre-alpine`: só tem JRE, ~180 MB vs ~600 MB do JDK completo. |
+| **Multi-stage build** | Build fora do Docker (CI monta o jar antes) | Rodar o build dentro do Docker garante que qualquer máquina que tenha Docker reproduz exatamente o mesmo resultado. Os testes unitários são executados no 1º estágio; se quebrarem, a imagem não é gerada. |
+| **Dados (volume)** | Bind mount (`./data:/var/lib/postgresql/data`) | Volume nomeado (`dados-mesadj`): sobrevive a `docker compose down`, independe do diretório de trabalho e é gerenciado pelo Docker. Bind mount facilita acesso direto ao sistema de arquivos, mas cria acoplamento com o SO do host. |
+| **Banco** | MySQL, MongoDB, H2 | PostgreSQL 16: mesmo banco que o Render oferece gratuitamente, elimina diferença entre desenvolvimento e produção. H2 foi descartado porque queria testar as constraints reais (unicidade, CHECK de BPM). |
+| **Testes de domínio primeiro** | Começar pela API e testar tudo integrado | Escrevemos os testes de `Instrumento` antes da entidade. Isso forçou a definir o contrato do domínio (como normalizar o nome, qual faixa de BPM) sem pensar em banco ou HTTP. Menor risco de lógica de negócio vazando para o controller. |
+| **Testcontainers** | H2 nos testes de integração, banco local na porta fixa | Testcontainers sobe um PostgreSQL real isolado por execução. Pega problemas que o H2 não pegaria (dialeto SQL diferente, constraints de banco). Não exige que o desenvolvedor tenha o banco instalado. |
+| **CI/CD** | GitLab CI, Jenkins, CircleCI | GitHub Actions: já é onde o repositório fica, sem conta extra. Os runners do Ubuntu têm Docker pré-instalado, o que simplifica o Testcontainers na esteira. |
+| **Deploy** | Railway, Fly.io | Render: plano gratuito suficiente para a entrega, suporte nativo a deploy por imagem Docker via webhook, banco PostgreSQL gerenciado disponível. |
+| **Fluxo de branch** | Git Flow (develop/release/hotfix) | GitHub Flow: grupo pequeno, uma versão no ar, ciclo de entrega curto. Uma branch por feature, PR → main → deploy. Git Flow teria cerimônia desnecessária. |
+| **Segredos** | Segredos no código, `.env` commitado | `.env` no `.gitignore`, `.env.example` como modelo. Segredos de produção (senha do banco, deploy hook) ficam nos **Secrets do GitHub**. O compose lê de variáveis de ambiente, sem valor padrão obrigatório para `DB_PASSWORD` (falha ruidosamente se não for definida). |
+
+---
+
+## Uso de IA
+
+Usamos o Antigravity (IA da CESAR School) durante o desenvolvimento desta entrega. Abaixo declaramos onde e como:
+
+| Etapa | O que a IA gerou | O que revisamos / alteramos |
+|-------|------------------|-----------------------------|
+| Estrutura do projeto | Esqueleto do `pom.xml`, `application.yml`, `MesaDjApplication.java` | Ajustamos as versões das dependências, removemos dependências desnecessárias |
+| Domínio | `Instrumento.java`, `RegraDeNegocioException.java` | Validamos que as regras (nome sem espaço, BPM 40–300) batiam com o que a versão de console original fazia |
+| Testes unitários | `InstrumentoTest`, `MesaServiceTest` | Revisamos os casos de borda; adicionamos o teste de `intervaloBatidaMs` que fazia referência à lógica original de threads |
+| Testes de integração | `InstrumentoRepositoryIT`, `InstrumentoApiIT`, steps do Cucumber | Ajustamos o `@Transactional` nos steps para isolar cenários; corrigimos o cenário de "mesa cheia" |
+| Dockerfile e compose | Gerado pela IA | Revisamos o `HEALTHCHECK`, o usuário sem root e o `depends_on` com `condition: service_healthy` |
+| Pipeline | `.github/workflows/pipeline.yml` e `rollback.yml` | Ajustamos o encoding da tag da imagem e o smoke test pós-deploy |
+| README | Gerado com base nas decisões tomadas pelo grupo | Revisado e complementado pelo grupo antes de commitar |
+
+Os prompts principais foram: *"monte a estrutura de um projeto Spring Boot com TDD para a Mesa DJ"*, *"escreva os testes unitários das regras de BPM e nome do instrumento antes da implementação"* e *"crie um Dockerfile multi-stage para Java 21 com PostgreSQL via compose"*.
