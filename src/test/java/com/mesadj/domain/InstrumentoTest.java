@@ -49,20 +49,19 @@ class InstrumentoTest {
         assertThat(i.getBpm()).isEqualTo(bpm);
     }
 
-    // BPM_MIN = 999 → este teste falha de propósito para evidência da esteira vermelha
     @ParameterizedTest
     @ValueSource(ints = {0, -10, 39, 301, 1000})
     void recusaBpmForaDaFaixaEMantemOValorAnterior(int bpm) {
         Instrumento i = new Instrumento("bateria", null);
         assertThatThrownBy(() -> i.alterarBpm(bpm))
                 .isInstanceOf(RegraDeNegocioException.class)
-                .hasMessageContaining("40")    // EVIDÊNCIA VERMELHA: BPM_MIN aqui era 999
+                .hasMessageContaining("40")
                 .hasMessageContaining("300");
         assertThat(i.getBpm()).isEqualTo(120);
     }
 
     @Test
-    @DisplayName("intervalo entre batidas = 60000 / BPM (era assim na versão de threads)")
+    @DisplayName("intervalo entre batidas = 60000 / BPM (era assim na versao de threads)")
     void calculaIntervaloEntreBatidas() {
         Instrumento i = new Instrumento("bateria", null);
         i.alterarBpm(150);
