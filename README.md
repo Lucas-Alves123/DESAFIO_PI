@@ -143,6 +143,8 @@ docker compose down -v       # para e apaga o volume do banco
 
 Os testes de integração e aceitação sobem um PostgreSQL descartável via **Testcontainers**. Não é necessário ter o banco instalado.
 
+> Importante: a suíte completa exige um Docker daemon disponível e com API compatível com Testcontainers (mínimo de API 1.40). Se a JVM reclamar sobre "client version 1.32 is too old" ou "Could not find a valid Docker environment", verifique se o daemon do Docker está ativo e se o cliente/engine está atualizado.
+
 ### Quais regras ganharam teste primeiro (e por quê)
 
 1. **Faixa de BPM (40–300)** — é o maior risco: um BPM 0 travaria a thread/batida e um BPM absurdo estraga o som ao vivo.
@@ -155,6 +157,8 @@ Os testes de integração e aceitação sobem um PostgreSQL descartável via **T
 - **Interface web (`mesa.js` / `mesa.css`) e o som da Web Audio API** — validados manualmente no navegador.
 - **Deploy no Render** — coberto apenas pelo smoke test `/actuator/health` na esteira.
 - **Rollback** — validado por execução manual do workflow (ver evidências).
+
+> Observação da execução local: o projeto valida bem em unitários e em Docker local, mas a fase de integração/aceitação depende do ambiente de execução do Docker. Em máquinas com Docker mais antigo ou socket incompatível, o Testcontainers falha antes de iniciar o banco e a suíte completa não completa.
 
 ### Histórico red → green
 
